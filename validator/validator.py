@@ -15,7 +15,7 @@ class ResultModel(BaseModel):
     miner_id: str
 
 # Địa chỉ server của miner
-MINER_URL = "http://127.0.0.1:8000/receive-task"  # Thay bằng IP thực tế nếu chạy trên máy khác
+MINER_URL = "http://172.17.0.2:17812/receive-task"  # Thay bằng IP thực tế nếu chạy trên máy khác
 
 # Endpoint nhận kết quả từ miner
 @app.post("/submit-result")
@@ -40,9 +40,9 @@ def send_task(task_counter):
         print(f"[Validator] Lỗi khi gửi task: {e}")
 
 if __name__ == "__main__":
-    print("[Validator] Khởi động server tại http://172.20.10.6:2001")
+    print("[Validator] Khởi động server tại http://172.17.0.3:33001")
     # Chạy server trong thread riêng
-    threading.Thread(target=lambda: uvicorn.run(app, host="172.20.10.6", port=2001)).start()
+    threading.Thread(target=lambda: uvicorn.run(app, host="172.17.0.3", port=33001)).start()
 
     # Vòng lặp gửi task liên tục
     task_counter = 0

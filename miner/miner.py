@@ -15,7 +15,7 @@ class TaskModel(BaseModel):
     priority: int
 
 # Địa chỉ server của validator
-VALIDATOR_URL = "http://192.168.1.15:4001/submit-result"  # Thay bằng IP thực tế nếu chạy trên máy khác
+VALIDATOR_URL = "http://116.98.177.250:33001/submit-result"  # Thay bằng IP thực tế nếu chạy trên máy khác
 
 # Hàm xử lý task (giả lập với thời gian ngẫu nhiên)
 def process_task(task):
@@ -50,5 +50,5 @@ def handle_task(task):
         print(f"[Miner] Lỗi khi gửi kết quả: {e}")
 
 if __name__ == "__main__":
-    print("[Miner] Khởi động server tại http://172.20.10.6:2001")
-    uvicorn.run(app, host="172.20.10.6", port=2001)
+    print("[Miner] Khởi động server tại http://172.17.0.2:17812")
+    uvicorn.run(app, host="172.17.0.2", port=17812)
