@@ -1,56 +1,52 @@
+from fastapi import FastAPI
+from pydantic import BaseModel
+import uvicorn
 import requests
 import time
-import json
+import threading
 
-class Validator:
-    def __init__(self, api_url):
-        self.api_url = api_url
-        self.scores = []  # Lưu trữ điểm số của các task
-        self.task_counter = 0  # Đếm số task để tạo task_id
+app = FastAPI()
 
-    def send_task(self):
-        """Gửi task đến miner qua API."""
-        self.task_counter += 1
-        task_data = {
-            "task_id": f"task_{self.task_counter:03d}",
-            "description": f"Process data batch {self.task_counter}",
-            "deadline": "2024-12-31",  # Sửa thành chuỗi (str)
-            "priority": (self.task_counter % 5) + 1  # Priority từ 1-5
-        }
-        url = f"{self.api_url}/send-task"
-        # Gửi task dưới dạng multipart/form-data
-        response = requests.post(url, data={"task": json.dumps(task_data)})
-        print(f"Task sent: {response.json()}")
-        return response.json()
+# Định nghĩa cấu trúc dữ liệu cho Result
+class ResultModel(BaseModel):
+    result_id: str
+    description: str
+    processing_time: float
+    miner_id: str
 
-    def get_result(self):
-        """Lấy kết quả từ miner qua API."""
-        url = f"{self.api_url}/get-result"
-        response = requests.get(url)
-        result_data = response.json()
-        if result_data["message"] == "Result retrieved":
-            return result_data["result"]
-        return None
+# Địa chỉ server của miner
+MINER_URL = "http://127.0.0.1:8000/receive-task"  # Thay bằng IP thực tế nếu chạy trên máy khác
 
-    def receive_result(self, result_data):
-        """Nhận kết quả từ miner và chấm điểm."""
-        if result_data:
-            score = len(result_data['description']) * 10  # Giả lập chấm điểm
-            self.scores.append(score)
-            print(f"Result received: {result_data}, Score: {score}")
-            if self.scores:
-                average_score = sum(self.scores) / len(self.scores)
-                print(f"Current average score: {average_score}")
+# Endpoint nhận kết quả từ miner
+@app.post("/submit-result")
+async def submit_result(result: ResultModel):
+    print(f"[Validator] Nhận kết quả: {result.result_id} - {result.description} "
+          f"(Thời gian xử lý: {result.processing_time}s, Miner: {result.miner_id})")
+    return {"message": f"Kết quả {result.result_id} đã được nhận và xử lý"}
 
-    def run(self):
-        """Chạy validator để gửi task liên tục và nhận kết quả."""
-        while True:
-            self.send_task()
-            time.sleep(2)
-            result_data = self.get_result()
-            self.receive_result(result_data)
-            time.sleep(2)
+# Hàm gửi task tới miner
+def send_task(task_counter):
+    task = {
+        "task_id": f"task_{task_counter:03d}",
+        "description": f"Xử lý dữ liệu batch {task_counter}",
+        "deadline": "2024-12-31",
+        "priority": (task_counter % 5) + 1
+    }
+    try:
+        print(f"[Validator] Gửi task: {task['task_id']} - {task['description']} (Priority: {task['priority']})")
+        response = requests.post(MINER_URL, json=task, timeout=5)
+        print(f"[Validator] Miner phản hồi: {response.json()}")
+    except Exception as e:
+        print(f"[Validator] Lỗi khi gửi task: {e}")
 
 if __name__ == "__main__":
-    validator = Validator(api_url="http://localhost:8000")
-    validator.run()
+    print("[Validator] Khởi động server tại http://172.20.10.6:2001")
+    # Chạy server trong thread riêng
+    threading.Thread(target=lambda: uvicorn.run(app, host="172.20.10.6", port=2001)).start()
+
+    # Vòng lặp gửi task liên tục
+    task_counter = 0
+    while True:
+        task_counter += 1
+        send_task(task_counter)
+        time.sleep(5)  # Gửi task mỗi 5 giây để demo rõ ràng
